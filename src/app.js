@@ -3,7 +3,9 @@ import helmet from 'helmet';
 import cors from 'cors';
 
 // RESOURCE IMPORTS
-import testRoute from './modules/test/test.route.js'
+import authRoute from './modules/auth/auth.route.js';
+import reqLogger from './middlewares/reqLogger.js'
+import errorHandler from './middlewares/errorHandler.js';
 
 const app = express();
 
@@ -13,8 +15,12 @@ app.use(helmet())
 app.use(express.json());
 app.use(express.urlencoded({ extended:false }));
 
+// CUSTOM MIDDLEWARES
+app.use(reqLogger)
+app.use(errorHandler)
+
 // ROUTES
-app.use('/', testRoute)
+app.use('/auth', authRoute);
 
 
 export default app;
