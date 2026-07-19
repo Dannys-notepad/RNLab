@@ -1,27 +1,32 @@
-import admin from "firebase-admin";
+import * as admin from "firebase-admin";
 import env from "../config/env.js";
 
-const initFirebase = () => {
-  const serviceAccountJson = env.FIREBASE_SERVICE_ACCOUNT;
-  if (!serviceAccountJson) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT environment variable is not set");
-  }
+let firestore;
 
-  const serviceAccount = JSON.parse(serviceAccountJson);
+try {
+    if (!admin.apps.length) {
+        const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  }
+        if (!serviceAccountJson) {
+            throw new Error('FIREBASE_SERVICE_ACCOUNT environment variable is not set');
+        }
 
-  const firestore = admin.firestore();
-  if (!firestore) {
-    throw new Error("Firestore instance could not be initialized");
-  }
+        const serviceAccount = JSON.parse(serviceAccountJson);
 
-  return firestore;
-};
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+        });
+    }
 
-export const db = initFirebase();
+    firestore = admin.firestore();
+} catch (error) {
+    console.error('Firebase initialization error:', error.message);
+    throw error;
+}
+
+if (!firestore) {
+    throw new Error('Firestore instance could not be initialized');
+}
+
+export const db = firestore;
 export { admin };

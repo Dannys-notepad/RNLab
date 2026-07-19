@@ -1,4 +1,4 @@
-# RNLab
+# RNLabs
 
 A lab management system API being built for a fullstack app, with Node.js, Express.js, and Firebase.
 
