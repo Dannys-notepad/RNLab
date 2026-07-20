@@ -14,11 +14,12 @@ export const registerUser = async (data) => {
   try{
     // DATA VALIDATION 
     const result = await registerSchema.safeParseAsync(data.body);
+    //console.log('Validation result:', result);
     if(!result.success){
         return {
             status: 400,
             message: "Validation failed",
-            errors: result.errors.issues,
+            errors: result.errors
         }
     }
     
@@ -45,7 +46,8 @@ export const registerUser = async (data) => {
       fullName,
       email,
       authProvider: 'email',
-      hashedPassword
+      hashedPassword,
+      googleId: null,
     }
 
     // creating user account activation link
@@ -60,7 +62,14 @@ export const registerUser = async (data) => {
     // creating user account and sending activation link email
     const newUser = createAdminUserModel(userPayload);
     await createUser(newUser);
-    await sendmail(mailFormat);
+    const mailSent = await sendmail(mailFormat);
+
+    if (!mailSent) {
+      return {
+        status: 200,
+        message: 'User registered successfully.'
+      }
+    }
 
     return {
       status: 200,
@@ -68,6 +77,7 @@ export const registerUser = async (data) => {
     }
 
   }catch (error) {
-    throw new AppError(error.message, 500, error.stack);
+    //throw new AppError(error.message, 500, error.stack);
+    throw error;
   }
 };

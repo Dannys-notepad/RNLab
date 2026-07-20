@@ -18,12 +18,17 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - password
  *             properties:
- *              firstName:
+ *               firstName:
  *                 type: string
- *              middleName:
- *                 type: 
- *              lastName:
+ *               middleName:
+ *                 type: string
+ *               lastName:
  *                 type: string
  *               email:
  *                 type: string

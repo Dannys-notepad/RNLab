@@ -1,28 +1,32 @@
-import { ROLES, AUTH_PROVIDER } from './enums/user.enum.js';
+import { ROLES, AUTH_PROVIDER, ACCOUNT_STATUS } from './enums/user.enum.js';
    
-const createAdminUserModel = async ({
+const createAdminUserModel = ({
     uid,
-    fullname,
+    fullName,
     email,
     authProvider,
-    passwordHash,
+    hashedPassword,
     googleId,
     accountStatus = ACCOUNT_STATUS[0], // Default account status is 'inactive'
-    role = role = ROLES[0], // Default role is 'admin'
+    role = ROLES[0], // Default role is 'admin'
     company = null,
     isVerified = false,
+    createdAt = new Date().toISOString(),
+    lastActiveAt = new Date().toISOString()
 } = {}) => {
     return {
         uid,
-        fullname,
+        fullName,
         email,
         authProvider,
-        passwordHash,
+        hashedPassword,
         googleId,
         accountStatus,
         role,
         company,
         isVerified,
+        createdAt,
+        lastActiveAt
     }
 }
 

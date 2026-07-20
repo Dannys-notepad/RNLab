@@ -26,7 +26,7 @@ const mail = async (recipient) => {
     //return info;
   } catch (error) {
     console.log('Email failed:', recipient.email, error.message);
-    return `mail not sent` 
+    return false; 
   }
 };
 
