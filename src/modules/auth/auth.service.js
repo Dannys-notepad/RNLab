@@ -2,11 +2,11 @@ import jwt from 'jsonwebtoken';
 import env from '../../config/env.js';
 import AppError from '../../errors/AppError.js';
 import sendmail from '../../services/mail.service.js';
-import { userId } from '../../utils/charGenerator.js';
+import { genUid } from '../../utils/charGenerator.js';
 import { registerSchema } from './auth.validator.js';
 import { createAdminUserModel } from '../../models/User.js';
 import { encrypt, decrypt } from '../../utils/encryption.js';
-import { createUser, findUserById } from '../../db/repos/user.repo.js';
+import { createUser, findUserByEmail, findUserById, updateVerification } from '../../db/repos/user.repo.js';
 
 
 // USER REGISTRATION SERVICE
@@ -19,7 +19,7 @@ export const registerUser = async (data) => {
         return {
             status: 400,
             message: "Validation failed",
-            errors: result.errors
+            errors: result.error.format()
         }
     }
     
@@ -28,7 +28,7 @@ export const registerUser = async (data) => {
     const { firstName, middleName, lastName, email, password } = result.data;
 
     // checking if user exist before continuing
-    const userExists = await findUserById(result.data.email);
+    const userExists = await findUserByEmail(result.data.email);
 
     if(userExists){
       return {
@@ -38,11 +38,11 @@ export const registerUser = async (data) => {
     }
     
     // structuring user data for account creation
-    const uid = await userId();
+    const id = await genUid();
     const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
-    const hashedPassword = await encrypt(password, env.PASSWORD_ENCRYPTION_KEY);
+    const hashedPassword = await encrypt(password, env.SECRET_KEY);
     const userPayload = {
-      uid,
+      id,
       fullName,
       email,
       authProvider: 'email',
@@ -50,13 +50,13 @@ export const registerUser = async (data) => {
       googleId: null,
     }
 
-    // creating user account activation link
-    const token = jwt.sign({ uid: userPayload.uid }, env.ENCRYPTION_KEY, { expiresIn: '2mins' })
+    // creating user account verification link
+    const token = jwt.sign({ id: userPayload.id }, env.SECRET_KEY, { expiresIn: '2mins' })
     const link = `${protocol}://${host}/api/v1/auth/activate-account/${token}`
     const mailFormat = {
       email: userPayload.email,
-      text: `Click this link to activate your account\n${link}`,
-      subject: 'ACCOUNT ACTIVATION'
+      text: `Click this link to verify and activate your account\n${link}`,
+      subject: 'EMAIL VERIFICATION'
     }
 
     // creating user account and sending activation link email
@@ -73,7 +73,7 @@ export const registerUser = async (data) => {
 
     return {
       status: 200,
-      message : 'User registered successfully and activation link sent to email'
+      message : 'User registered successfully and verification link sent to email'
     }
 
   }catch (error) {
@@ -81,3 +81,100 @@ export const registerUser = async (data) => {
     throw error;
   }
 };
+
+
+// ACCOUNT VERIFICATION SERVICE
+export const activateUserAccount = async (token) => {
+  try {
+
+    if(!token){
+      return {
+        status: 400,
+        message: 'Token is required'
+      }
+    }
+
+    jwt.verify(token, env.SECRET_KEY, async (error, payload) => {
+      if(error){
+        if(error instanceof jwt.JsonWebTokenError){
+          const decode = jwt.decode(token);
+          if(!decode){
+            return {
+              status: 400,
+              message: 'This verification link is incorrect, check your email follow instructions and try again'
+            }
+          }
+
+          return {
+            status: 400,
+            message: 'activation has expired, generate another activation link'
+          }
+        }
+      } else {
+        const user = await findUserById({ where: { id: payload.id } });
+
+        if(!user){
+          return {
+            status: 404,
+            message: 'no account with this email'
+          }
+        }
+
+        /*const verifyUser = */ await saveIsVerified(payload.id);
+
+        return {
+          status: 200,
+          message: 'account activated, proceed to login'
+        }
+      }
+    })
+  } catch (error) {
+    console.log(error);
+    if(error instanceof jwt.JsonWebTokenError){
+      return {
+        status: 400,
+        error: 'Link as expired, generate another verification link'
+      }
+    }
+
+    return {
+      status: 500,
+      message: 'Error verifying user'
+    }
+    throw error;
+  }
+}
+
+// GENERATE ACTIVATION URL SERVICE
+export const generateVerificationUrl = async (data) => {
+  try {
+    const {email, protocol, host} = await data;
+    
+    const user = await findUserByEmail({ where: { email } })
+    if(!user){
+      return{
+        status: 404,
+        message: `an account with email ${email} do not exist`
+      }
+    }
+
+    const newToken = jwt.sign({ userId: user.id }, env.SECRET_KEY, { expiresIn: '2mins' });
+    const link = `${protocol}://${host}/api/v1/auth/activate-account/${newToken}`;
+
+    const mailFormat = {
+      email: user.email,
+      text: `Click this link to activate your account\n${link}`,
+      subject: 'RESEND: ACCOUNT ACTIVATION'
+    }
+
+    await sendmail(mailFormat);
+    return {
+      status: 200,
+      message: `Activate link has been sent to your email address ${user.email}`
+    }
+
+  } catch (error) {
+    throw error
+  }
+}
+

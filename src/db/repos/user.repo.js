@@ -11,13 +11,35 @@ const isPlainObject = (value) => {
  * @returns {FirebaseFirestore.DocumentReference} Firestore document reference.
  * @throws {Error} When userEmail is empty or invalid.
  */
-const getUserDocRef = (email) => {
+const getUserDocRefEmail = (email) => {
     const normalizedEmail = String(email).trim();
     if (!normalizedEmail) {
         throw new Error('email is required');
     }
 
     return db.collection('users').doc(normalizedEmail);
+}
+
+/**
+ * Get a Firestore document reference for the specified user id.
+ *
+ * @param {string} userId - The user id to use as the document key.
+ * @returns {FirebaseFirestore.DocumentReference} Firestore document reference.
+ * @throws {Error} When userId is empty or invalid.
+ */
+const getUserDocRefId = (id) => {
+    const normalizedId = String(id).trim();
+    if (!normalizedId) {
+        throw new Error('id is required');
+    }
+
+    return db.collection('users').doc(normalizedId);
+}
+
+const touchUser = (userId, extraFields = []) => {
+    const ref = getUserDocRefId(userId);
+
+    return ref.update({ ...extraFields })
 }
 
 /**
@@ -40,7 +62,7 @@ export const createUser = async (userData) => {
     }
 
     try {
-        const ref = getUserDocRef(userData.email);
+        const ref = getUserDocRefEmail(userData.email);
         await ref.set(userData);
         return ref;
     } catch (error) {
@@ -56,16 +78,54 @@ export const createUser = async (userData) => {
  * @returns {Promise<Object|null>} User data if found, otherwise null.
  * @throws {Error} When userEmail is missing or Firestore read fails.
  */
-export const findUserById = async (userEmail) => {
+export const findUserByEmail = async (userEmail) => {
     if (!userEmail) {
         throw new Error('userEmail is required');
     }
 
     try {
-        const doc = await getUserDocRef(userEmail).get();
+        const doc = await getUserDocRefEmail(userEmail).get();
         return doc.exists ? doc.data() : null;
     } catch (error) {
         console.error(`Error finding user ${userEmail}:`, error.message);
+        throw error;
+    }
+}
+
+/**
+ * Find a user document by id and return its data.
+ *
+ * @param {string} userId - The id of the user to retrieve.
+ * @returns {Promise<Object|null>} User data if found, otherwise null.
+ * @throws {Error} When userId is missing or Firestore read fails.
+ */
+export const findUserById = async (userId) => {
+    if (!userId) {
+        throw new Error('userId is required');
+    }
+
+    try {
+        const doc = await getUserDocRefId(userId).get();
+        return doc.exists ? doc.data() : null;
+    } catch (error) {
+        console.error(`Error finding user ${userId}:`, error.message);
+        throw error;
+    }
+}
+
+export const updateVerification = async (userId) => {
+    if(!userId){
+        throw new Error('user id is required')
+    }
+
+    try {
+        await touchUser(userId, {
+            isisVerified: true,
+            accountStatus: 'active'
+        });
+        return userId
+    } catch (error) {
+        console.error(`Error updating user verification status:`, error.message);
         throw error;
     }
 }

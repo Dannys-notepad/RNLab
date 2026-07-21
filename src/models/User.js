@@ -1,7 +1,7 @@
 import { ROLES, AUTH_PROVIDER, ACCOUNT_STATUS } from './enums/user.enum.js';
    
 const createAdminUserModel = ({
-    uid,
+    id,
     fullName,
     email,
     authProvider,
@@ -15,7 +15,7 @@ const createAdminUserModel = ({
     lastActiveAt = new Date().toISOString()
 } = {}) => {
     return {
-        uid,
+        id,
         fullName,
         email,
         authProvider,

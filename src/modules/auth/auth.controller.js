@@ -1,5 +1,7 @@
 import {
-    registerUser
+    registerUser,
+    activateUserAccount,
+    generateVerificationUrl
 } from './auth.service.js';
 import { success, error } from '../../utils/response.js';
 
@@ -20,8 +22,45 @@ export const registerUserController = async (req, res, next) => {
         if (registerNewUser.status !== 200) {
             return error(res, registerNewUser.message, registerNewUser.errors, registerNewUser.status);
         }
-        success(res, "User registered successfully", registerNewUser);
-    } catch (err) {
-        next(err); // Pass the error to the centralized error handler
+        success(res, 'User registered successfully', registerNewUser);
+    } catch (error) {
+        next(error); // Pass the error to the centralized error handler
+    }
+}
+
+// ACCOUNT ACTIVATION CONTROLLER
+export const activateUserAccountController = async (req, res) => {
+    try {
+        const { token } = await req.params;
+        const activateAccount = await activateUserAccount(token);
+
+        if(activateAccount.status !== 200){
+            return error(res, activateAccount.message)
+        }
+
+        success(res, 'User email verified and account activated', activateAccount);
+    } catch (error) {
+        next(error)
+    }
+}
+
+// GENERATE ACTIVATION URL CONTROLLER
+export const generateVerificationUrlController = async (req, res) => {
+    try {
+        const body = await req.body;
+        const data = {
+            body,
+            protocol: req.protocol,
+            host: req.get('host'),
+        }
+
+        const genActUrl = await generateVerificationUrl(data);
+        if(genActUrl.status !== 200){
+            return error(res, genActUrl.message)
+        }
+
+        success(res, 'verification link sent to your email', activateAccount);
+    } catch (error) {
+        next(error)
     }
 }
